@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan EMI Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* Custom CSS for neumorphism/glassmorphism effects and transitions */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #a7b0c0, #e0e5ec); /* Soft gradient background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.2); /* Semi-transparent background for glassmorphism */
+            backdrop-filter: blur(10px); /* Glassmorphism blur effect */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); /* Stronger shadow for depth */
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .input-group label {
+            color: #4a5568; /* Darker grey for labels */
+            font-weight: 500;
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.6); /* Lighter background for input fields */
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #2d3748; /* Dark text color */
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease-in-out;
+            outline: none;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -2px -2px 5px rgba(255, 255, 255, 0.7); /* Neumorphism inset shadow */
+        }
+
+        .input-field:focus {
+            box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.1), inset -1px -1px 3px rgba(255, 255, 255, 0.7), 0 0 0 3px rgba(66, 153, 225, 0.5); /* Focus ring */
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .radio-group input[type="radio"]:checked + label {
+            background-color: #667eea; /* Indigo for checked state */
+            color: white;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+        }
+
+        .radio-group label {
+            background-color: rgba(255, 255, 255, 0.6); /* Light background for radio labels */
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #4a5568;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1), -2px -2px 5px rgba(255, 255, 255, 0.7); /* Neumorphism outset shadow */
+        }
+
+        .radio-group label:hover {
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1), -1px -1px 3px rgba(255, 255, 255, 0.7);
+        }
+
+        .result-box {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 1rem 1.5rem;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05), inset -2px -2px 5px rgba(255, 255, 255, 0.6); /* Subtle inset shadow */
+        }
+
+        .modal {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #e0e5ec;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-button {
+            background-color: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            transition: background-color 0.2s ease-in-out;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1), -2px -2px 5px rgba(255, 255, 255, 0.7);
+        }
+
+        .modal-button:hover {
+            background-color: #5a67d8;
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1), -1px -1px 3px rgba(255, 255, 255, 0.7);
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            .card {
+                flex-direction: row;
+                justify-content: space-between;
+                gap: 3rem;
+            }
+            .inputs-section {
+                flex: 1;
+            }
+            .results-chart-section {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body class="selection:bg-indigo-300 selection:text-indigo-900">
+    <!-- Main Calculator Card -->
+    <div class="card">
+        <!-- Input Section -->
+        <div class="inputs-section flex-1 space-y-6">
+            <h2 class="text-3xl font-bold text-gray-800 text-center mb-8">Loan EMI Calculator</h2>
+
+            <!-- Loan Amount Input -->
+            <div class="input-group">
+                <label for="loanAmount" class="block text-sm mb-2">Loan Amount ($)</label>
+                <input type="number" id="loanAmount" class="input-field w-full" placeholder="e.g., 500000" value="500000" min="0">
+            </div>
+
+            <!-- Interest Rate Input -->
+            <div class="input-group">
+                <label for="interestRate" class="block text-sm mb-2">Annual Interest Rate (%)</label>
+                <input type="number" id="interestRate" class="input-field w-full" placeholder="e.g., 7.5" value="7.5" step="0.01" min="0">
+            </div>
+
+            <!-- Loan Tenure Input with Toggle -->
+            <div class="input-group">
+                <label for="loanTenure" class="block text-sm mb-2">Loan Tenure</label>
+                <div class="flex items-center space-x-3">
+                    <input type="number" id="loanTenure" class="input-field w-full" placeholder="e.g., 20" value="20" min="0">
+                    <div class="radio-group flex rounded-xl p-1 gap-1 border border-gray-200 shadow-inner">
+                        <input type="radio" id="tenureYears" name="tenureType" value="years" class="hidden" checked>
+                        <label for="tenureYears" class="px-4 py-2 rounded-lg cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out shadow-sm hover:shadow-md">Years</label>
+
+                        <input type="radio" id="tenureMonths" name="tenureType" value="months" class="hidden">
+                        <label for="tenureMonths" class="px-4 py-2 rounded-lg cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out shadow-sm hover:shadow-md">Months</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results and Chart Section -->
+        <div class="results-chart-section flex-1 flex flex-col items-center justify-center space-y-6">
+            <h3 class="text-2xl font-semibold text-gray-700 text-center">Summary</h3>
+
+            <!-- EMI Result -->
+            <div class="result-box w-full text-center">
+                <p class="text-sm text-gray-600">Equated Monthly Installment (EMI)</p>
+                <p id="emiResult" class="text-3xl font-bold text-indigo-700 mt-1">$0.00</p>
+            </div>
+
+            <!-- Total Interest Result -->
+            <div class="result-box w-full text-center">
+                <p class="text-sm text-gray-600">Total Interest Payable</p>
+                <p id="totalInterestResult" class="text-xl font-bold text-red-600 mt-1">$0.00</p>
+            </div>
+
+            <!-- Total Payable Result -->
+            <div class="result-box w-full text-center">
+                <p class="text-sm text-gray-600">Total Amount Payable (P + I)</p>
+                <p id="totalPayableResult" class="text-xl font-bold text-green-700 mt-1">$0.00</p>
+            </div>
+
+            <!-- Pie Chart Canvas -->
+            <div class="w-full max-w-sm mt-8">
+                <canvas id="principalInterestChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Alerts -->
+    <div id="customModal" class="modal fixed inset-0 flex items-center justify-center hidden">
+        <div class="modal-content text-center">
+            <h4 id="modalTitle" class="text-xl font-semibold mb-4 text-gray-800"></h4>
+            <p id="modalMessage" class="mb-6 text-gray-700"></p>
+            <button id="modalCloseButton" class="modal-button focus:outline-none">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const loanAmountInput = document.getElementById('loanAmount');
+        const interestRateInput = document.getElementById('interestRate');
+        const loanTenureInput = document.getElementById('loanTenure');
+        const tenureYearsRadio = document.getElementById('tenureYears');
+        const tenureMonthsRadio = document.getElementById('tenureMonths');
+
+        const emiResult = document.getElementById('emiResult');
+        const totalInterestResult = document.getElementById('totalInterestResult');
+        const totalPayableResult = document.getElementById('totalPayableResult');
+        const chartCanvas = document.getElementById('principalInterestChart');
+
+        // Custom modal elements
+        const customModal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        let myChart; // Variable to hold the Chart.js instance
+
+        /**
+         * Shows a custom modal with a given title and message.
+         * @param {string} title - The title of the modal.
+         * @param {string} message - The message content of the modal.
+         */
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            customModal.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the custom modal.
+         */
+        function hideModal() {
+            customModal.classList.add('hidden');
+        }
+
+        // Add event listener to close button of the modal
+        modalCloseButton.addEventListener('click', hideModal);
+
+        /**
+         * Calculates the Equated Monthly Installment (EMI) for a loan.
+         * @param {number} principal - The principal loan amount.
+         * @param {number} annualInterestRate - The annual interest rate in percentage (e.g., 7.5).
+         * @param {number} tenureInMonths - The loan tenure in months.
+         * @returns {object} An object containing emi, totalInterest, and totalPayable.
+         */
+        function calculateEMI(principal, annualInterestRate, tenureInMonths) {
+            // Validate inputs
+            if (principal <= 0 || annualInterestRate < 0 || tenureInMonths <= 0) {
+                showModal('Invalid Input', 'Please enter positive values for Loan Amount, Interest Rate, and Tenure.');
+                return { emi: 0, totalInterest: 0, totalPayable: 0 };
+            }
+
+            const monthlyInterestRate = annualInterestRate / (12 * 100);
+
+            let emi = 0;
+            let totalPayable = 0;
+            let totalInterest = 0;
+
+            if (monthlyInterestRate === 0) {
+                // Simple case for 0% interest
+                emi = principal / tenureInMonths;
+                totalPayable = principal;
+                totalInterest = 0;
+            } else {
+                // EMI calculation formula
+                const powerFactor = Math.pow(1 + monthlyInterestRate, tenureInMonths);
+                emi = principal * monthlyInterestRate * powerFactor / (powerFactor - 1);
+                totalPayable = emi * tenureInMonths;
+                totalInterest = totalPayable - principal;
+            }
+
+            return {
+                emi: emi,
+                totalInterest: totalInterest,
+                totalPayable: totalPayable
+            };
+        }
+
+        /**
+         * Formats a number as a currency string.
+         * @param {number} amount - The number to format.
+         * @returns {string} The formatted currency string.
+         */
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        /**
+         * Updates the chart with new principal and total interest values.
+         * @param {number} principal - The loan principal amount.
+         * @param {number} totalInterest - The total interest payable.
+         */
+        function updateChart(principal, totalInterest) {
+            if (myChart) {
+                myChart.data.datasets[0].data = [principal, totalInterest];
+                myChart.update(); // Smoothly update the chart
+            } else {
+                // Initialize Chart.js pie chart
+                myChart = new Chart(chartCanvas, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Principal Amount', 'Total Interest'],
+                        datasets: [{
+                            data: [principal, totalInterest],
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)', // Indigo for Principal
+                                'rgba(239, 68, 68, 0.8)'    // Red for Interest
+                            ],
+                            borderColor: [
+                                'rgba(255, 255, 255, 1)',
+                                'rgba(255, 255, 255, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: 'Inter',
+                                        size: 14,
+                                        weight: '500'
+                                    },
+                                    color: '#4a5568'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += formatCurrency(context.raw);
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        /**
+         * Main function to perform calculations and update the UI.
+         */
+        function performCalculation() {
+            const loanAmount = parseFloat(loanAmountInput.value);
+            const interestRate = parseFloat(interestRateInput.value);
+            let loanTenure = parseFloat(loanTenureInput.value);
+
+            // Determine tenure in months
+            if (tenureYearsRadio.checked) {
+                loanTenure *= 12; // Convert years to months
+            }
+
+            // Perform calculations only if inputs are valid numbers
+            if (isNaN(loanAmount) || isNaN(interestRate) || isNaN(loanTenure)) {
+                emiResult.textContent = formatCurrency(0);
+                totalInterestResult.textContent = formatCurrency(0);
+                totalPayableResult.textContent = formatCurrency(0);
+                updateChart(0, 0); // Reset chart
+                return;
+            }
+
+            const { emi, totalInterest, totalPayable } = calculateEMI(loanAmount, interestRate, loanTenure);
+
+            // Update display results
+            emiResult.textContent = formatCurrency(emi);
+            totalInterestResult.textContent = formatCurrency(totalInterest);
+            totalPayableResult.textContent = formatCurrency(totalPayable);
+
+            // Update the chart
+            updateChart(loanAmount, totalInterest);
+        }
+
+        // Add event listeners for real-time calculation
+        loanAmountInput.addEventListener('input', performCalculation);
+        interestRateInput.addEventListener('input', performCalculation);
+        loanTenureInput.addEventListener('input', performCalculation);
+        tenureYearsRadio.addEventListener('change', performCalculation);
+        tenureMonthsRadio.addEventListener('change', performCalculation);
+
+        // Initial calculation on page load
+        window.onload = function() {
+            performCalculation();
+        };
+    </script>
+</body>
+</html>

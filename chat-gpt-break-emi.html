@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loan EMI Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col items-center justify-start px-4 py-6">
+
+  <div class="bg-white w-full max-w-4xl p-6 rounded-2xl shadow-2xl">
+    <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">Loan EMI Calculator</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div>
+        <label class="block text-sm font-medium mb-1">Loan Amount (₹)</label>
+        <input id="loanAmount" type="number" value="500000" min="0"
+               class="w-full rounded-lg p-2 border border-gray-300"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Interest Rate (% p.a.)</label>
+        <input id="interestRate" type="number" step="0.1" value="7.5" min="0"
+               class="w-full rounded-lg p-2 border border-gray-300"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Tenure (Years)</label>
+        <input id="tenure" type="number" value="5" min="1"
+               class="w-full rounded-lg p-2 border border-gray-300"/>
+      </div>
+    </div>
+
+    <div class="text-center mb-6">
+      <p id="emiOutput" class="text-xl font-semibold">EMI: ₹0</p>
+      <p id="interestOutput">Total Interest: ₹0</p>
+      <p id="totalOutput">Total Amount Payable: ₹0</p>
+    </div>
+
+    <div class="mb-6">
+      <canvas id="emiChart" height="200"></canvas>
+    </div>
+
+    <div class="overflow-x-auto mt-8">
+      <table class="min-w-full border text-sm text-center" id="amortizationTable">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="border px-2 py-1">Year</th>
+            <th class="border px-2 py-1">Total EMI Paid</th>
+            <th class="border px-2 py-1">Principal Paid</th>
+            <th class="border px-2 py-1">Interest Paid</th>
+            <th class="border px-2 py-1">Balance</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white text-gray-800"></tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-center mt-6">
+      <button onclick="resetFields()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow">
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const loanAmount = document.getElementById('loanAmount');
+    const interestRate = document.getElementById('interestRate');
+    const tenure = document.getElementById('tenure');
+
+    const emiOutput = document.getElementById('emiOutput');
+    const interestOutput = document.getElementById('interestOutput');
+    const totalOutput = document.getElementById('totalOutput');
+    const amortizationTableBody = document.querySelector('#amortizationTable tbody');
+
+    const ctx = document.getElementById('emiChart').getContext('2d');
+    let chart;
+
+    function calculateEMI() {
+      const P = parseFloat(loanAmount.value);
+      const annualRate = parseFloat(interestRate.value);
+      const years = parseInt(tenure.value);
+
+      const r = annualRate / 12 / 100;
+      const n = years * 12;
+
+      const emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      const totalPayment = emi * n;
+      const totalInterest = totalPayment - P;
+
+      emiOutput.textContent = `EMI: ₹${emi.toFixed(2)}`;
+      interestOutput.textContent = `Total Interest: ₹${totalInterest.toFixed(2)}`;
+      totalOutput.textContent = `Total Amount Payable: ₹${totalPayment.toFixed(2)}`;
+
+      updateChart(P, totalInterest);
+      buildAmortization(P, r, emi, n);
+    }
+
+    function updateChart(principal, interest) {
+      const data = {
+        labels: ['Principal', 'Interest'],
+        datasets: [{
+          data: [principal, interest],
+          backgroundColor: ['#4F46E5', '#F59E0B'],
+        }]
+      };
+
+      if (chart) {
+        chart.data = data;
+        chart.update();
+      } else {
+        chart = new Chart(ctx, {
+          type: 'pie',
+          data: data,
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.label}: ₹${ctx.parsed.toFixed(2)}`
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function buildAmortization(P, r, emi, totalMonths) {
+      let balance = P;
+      let yearPrincipal = 0;
+      let yearInterest = 0;
+      amortizationTableBody.innerHTML = "";
+
+      for (let m = 1; m <= totalMonths; m++) {
+        const interest = balance * r;
+        const principal = emi - interest;
+        balance -= principal;
+
+        yearPrincipal += principal;
+        yearInterest += interest;
+
+        if (m % 12 === 0 || m === totalMonths) {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="border px-2 py-1">${Math.ceil(m / 12)}</td>
+            <td class="border px-2 py-1">₹${(emi * Math.min(12, totalMonths - m + 12)).toFixed(2)}</td>
+            <td class="border px-2 py-1">₹${yearPrincipal.toFixed(2)}</td>
+            <td class="border px-2 py-1">₹${yearInterest.toFixed(2)}</td>
+            <td class="border px-2 py-1">₹${Math.max(0, balance).toFixed(2)}</td>
+          `;
+          amortizationTableBody.appendChild(row);
+          yearPrincipal = 0;
+          yearInterest = 0;
+        }
+      }
+    }
+
+    function resetFields() {
+      loanAmount.value = 0;
+      interestRate.value = 0;
+      tenure.value = 1;
+      calculateEMI();
+    }
+
+    loanAmount.addEventListener('input', calculateEMI);
+    interestRate.addEventListener('input', calculateEMI);
+    tenure.addEventListener('input', calculateEMI);
+
+    window.onload = calculateEMI;
+  </script>
+
+</body>
+</html>
